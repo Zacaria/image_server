@@ -25,7 +25,7 @@ async fn listen(router: axum::Router) -> Result<()> {
 
     tracing::info!("listening on {}", listener.local_addr()?);
 
-    let _ = axum::serve(listener, router).await?;
+    axum::serve(listener, router).await?;
     Ok(())
 }
 
