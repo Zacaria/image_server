@@ -18,6 +18,13 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Check code formatting
+        run: |
+          cargo fmt --all -- --check
+      - name: Run Clippy
+        run: |
+          cargo clippy -- -D warnings
+
       - name: Build
         uses: actions-rs/cargo@v1
         with:
