@@ -1,5 +1,3 @@
-use std::os::macos::raw::stat;
-
 use anyhow::Result;
 
 use helpers::common::TestClient;

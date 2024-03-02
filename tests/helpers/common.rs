@@ -73,6 +73,7 @@ impl TestClient {
         self.make_request(Method::GET, path, query, None).await
     }
 
+    #[allow(dead_code)]
     pub async fn post(
         &self,
         path: &str,
