@@ -1,5 +1,6 @@
 use errors::Result;
 use tracing::dispatcher::set_global_default;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Layer, Registry};
 
 mod api;
@@ -7,9 +8,9 @@ mod errors;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    dotenv::dotenv().ok();
+    let _ = setup_logging();
 
-    setup_logging();
+    dotenv::dotenv().ok();
 
     let router = api::app();
 
@@ -29,15 +30,36 @@ async fn listen(router: axum::Router) -> Result<()> {
     Ok(())
 }
 
-const DEFAULT_LOG_FILTER: &str = "info";
-fn setup_logging() {
+const DEFAULT_LOG_FILTER: &str = "image_server=info,tower_http=info";
+// fn setup_logging() {
+//     let console_layer = fmt::layer().with_writer(std::io::stdout).with_filter(
+//         EnvFilter::try_from_default_env().unwrap_or_else(|_| DEFAULT_LOG_FILTER.into()),
+//     );
+
+//     let subscriber = Registry::default().with(console_layer);
+
+//     set_global_default(subscriber.into()).expect("Failed to set log subscriber");
+// }
+const DEFAULT_LOG_PATH: &str = "logs";
+
+fn setup_logging() -> impl Drop {
+    let log_path = std::env::var("LOG_PATH").unwrap_or(DEFAULT_LOG_PATH.to_string());
+    let file_appender = RollingFileAppender::new(Rotation::DAILY, log_path, "app.log");
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+    let file_layer = fmt::layer().with_writer(non_blocking).json().with_filter(
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| DEFAULT_LOG_FILTER.into()),
+    );
+
     let console_layer = fmt::layer().with_writer(std::io::stdout).with_filter(
         EnvFilter::try_from_default_env().unwrap_or_else(|_| DEFAULT_LOG_FILTER.into()),
     );
 
-    let subscriber = Registry::default().with(console_layer);
+    let subscriber = Registry::default().with(file_layer).with(console_layer);
 
-    set_global_default(subscriber.into()).expect("Failed to set log subscriber");
+    set_global_default(subscriber.into()).expect("Failed to set global log subsriber");
+
+    guard
 }
 
 #[cfg(test)]
